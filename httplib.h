@@ -668,6 +668,8 @@ public:
   explicit ThreadPool(size_t n, size_t mqr = 0)
       : shutdown_(false), max_queued_requests_(mqr) {
     while (n) {
+      /*emplace_back()：就地构造函数，构造std::thread对象，将对象插入向量末尾
+      worker(*this)为构造std::thread对象时传入的匿名对象，即仿函数*/
       threads_.emplace_back(worker(*this));
       n--;
     }
@@ -915,6 +917,7 @@ public:
   void wait_until_ready() const;
   void stop();
 
+  // 成员变量：一个函数对象
   std::function<TaskQueue *(void)> new_task_queue;
 
 protected:
@@ -6330,6 +6333,10 @@ inline bool Server::listen_internal() {
   auto se = detail::scope_exit([&]() { is_running_ = false; });
 
   {
+      /*new_task_queue(
+          [] { return new ThreadPool(CPPHTTPLIB_THREAD_POOL_COUNT); }
+          函数对象调用返回了ThreadPool类对象，是TaskQueue类的子类
+          独占式智能指针指向该对象*/
     std::unique_ptr<TaskQueue> task_queue(new_task_queue());
 
     while (svr_sock_ != INVALID_SOCKET) {
